@@ -1,0 +1,2 @@
+data type verandering -> ipv alles in gamestate een gameobjects data type
+score van player naar gamestate
