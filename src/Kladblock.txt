@@ -1,2 +1,4 @@
 data type verandering -> ipv alles in gamestate een gameobjects data type
 score van player naar gamestate
+bullet type is geen character maar een eigen type
+Bullet Speed
