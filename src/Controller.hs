@@ -12,7 +12,7 @@ import System.Random
 step :: Float -> GameState -> IO GameState
 step secs gs
     | elapsedTime gs + secs > spawnEnemySecs
-        = return $ gs {gameObjects = doAllSteps ((gameObjects gs) { enemies = (enemies $ gameObjects gs) ++ (enemySpawner enemySpawnCycle)})}
+        = return $ gs {gameObjects = doAllSteps ((gameObjects gs) { enemies = enemySpawner(enemies $ gameObjects gs)})}
     | elapsedTime gs + secs > nO_SECS_BETWEEN_CYCLES
         = return $ gs {gameObjects = doAllSteps (gameObjects gs)}
     | otherwise = 
@@ -30,7 +30,6 @@ movePlayer player@(Player x y speed lives)
 moveBullets :: [Bullet] -> [Bullet]
 moveBullets bullets = filter (\bullet -> deleteBullets bullet) (map moveBullet bullets)
 
-
 moveBullet :: Bullet -> Bullet 
 moveBullet (Bullet x y speed btype)
                 | btype == BP = Bullet (x + speed) y speed btype
@@ -41,12 +40,24 @@ deleteBullets bullet
                 | (((bposX bullet) > -(fromIntegral screenWidth `div` 2)) && ((bposX bullet) < (fromIntegral screenWidth `div` 2))) = True
                 | otherwise = False
 
-enemySpawner :: [Int] -> [Enemy]
-enemySpawner [] = []
-enemySpawner (x:xs) = map (\y -> spawnEnemy {-(-(fromIntegral screenWidth `div` 2) + ((screenWidth `div` x) * y))-} 0  ) [1 .. x]
+enemySpawner :: ([Enemy], [Int]) -> ([Enemy], [Int])
+enemySpawner ( enemies , [] ) = (enemies, [])
+enemySpawner ( enemies , [x]) = (enemies ++ waveSpawner (makeWaves x) 0, [])
+enemySpawner ( enemies , (x:xs)) = (enemies ++ waveSpawner (makeWaves x) 0, xs)
 
-spawnEnemy :: Int -> Enemy
-spawnEnemy y = Enemy enemySpawnX y maxEnemySpeed 1
+
+makeWaves :: Int -> [Int]
+makeWaves n
+        | n - 5 >= 0 = 5 : makeWaves (n - 5)
+        | otherwise = [5 - n]
+
+waveSpawner :: [Int] -> Int -> [Enemy]
+waveSpawner [] _ = []
+waveSpawner [wave] waveNb = (map (\n -> spawnEnemy waveNb (-(fromIntegral screenWidth `div` 2) + ((screenWidth `div` wave) * n))) [1 .. wave])
+waveSpawner (wave:waves) waveNb = (map (\n -> spawnEnemy waveNb (-(fromIntegral screenWidth `div` 2) + ((screenWidth `div` wave) * n))) [1 .. wave]) ++ waveSpawner waves (waveNb + 1)
+
+spawnEnemy :: Int -> Int -> Enemy
+spawnEnemy waveNb y = Enemy (enemySpawnX + (100 * waveNb)) y maxEnemySpeed 1
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState

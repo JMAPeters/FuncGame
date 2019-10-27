@@ -16,8 +16,8 @@ makeView go = pictures ([drawPlayer (player $ go), drawText (enemies $ go)] ++ d
 drawPlayer :: Player -> Picture
 drawPlayer player = translate (fromIntegral (pposX $ player)) (fromIntegral (pposY $ player)) $ color blue $ circleSolid 30
 
-drawEnemys :: [Enemy] -> [Picture]
-drawEnemys enemies = map drawEnemy enemies
+drawEnemys :: ([Enemy], [Int]) -> [Picture]
+drawEnemys (enemies, _) = map drawEnemy enemies
 
 drawEnemy :: Enemy -> Picture
 drawEnemy enemy = translate (fromIntegral (eposX $ enemy)) (fromIntegral (eposY $ enemy)) $ color red $ circleSolid 30
@@ -29,4 +29,4 @@ drawBullet :: Bullet -> Picture
 drawBullet bullet = translate (fromIntegral (bposX $ bullet)) (fromIntegral (bposY $ bullet)) $ color green $ circleSolid 10
 
 
-drawText x = color green (text (show(length x)))
+drawText (enemies, _) = color green (text (show(length enemies)))

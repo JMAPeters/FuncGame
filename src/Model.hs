@@ -17,8 +17,8 @@ maxBulletSpeed = 15
 maxEnemySpeed :: Int
 maxEnemySpeed = 7
 
-enemySpawnCycle :: [Int]
-enemySpawnCycle = [1,2]
+spawnEnemyCycle :: [Int]
+spawnEnemyCycle = [3]
 enemySpawnX :: Int
 enemySpawnX = 100 --(screenWidth `div` 2) + 30
 spawnEnemySecs :: Float
@@ -37,7 +37,7 @@ data State = Start | InGame | Pause | End
 
 data GameObjects = GameObjects {
                    player :: Player
-                 , enemies :: [Enemy]
+                 , enemies :: ([Enemy], [Int])
                  , bullets :: [Bullet]
                  }
 
@@ -71,7 +71,7 @@ instance Eq BulletType where
 initialState :: GameState
 initialState = GameState startObjects Start 0 0
 
-startObjects = GameObjects startPlayer [] []
+startObjects = GameObjects startPlayer ([], spawnEnemyCycle) []
 
 -- Player x y speed lives
 startPlayer :: Player
