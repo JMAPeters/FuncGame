@@ -2,6 +2,8 @@
 --   which represent the state of the game
 module Model where
 
+import System.Random
+
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 1
 
@@ -16,24 +18,39 @@ maxBulletSpeed :: Int
 maxBulletSpeed = 15
 maxEnemySpeed :: Int
 maxEnemySpeed = 7
+playerSize :: Int
+playerSize = 30 
+enemySize :: Int
+enemySize = 30
+bulletSize :: Int
+bulletSize = 10
+randomShoot :: Int
+randomShoot = 5
 
 spawnEnemyCycle :: [Int]
-spawnEnemyCycle = [3]
+spawnEnemyCycle = [8, 3]
 enemySpawnX :: Int
-enemySpawnX = 100 --(screenWidth `div` 2) + 30
-spawnEnemySecs :: Float
-spawnEnemySecs = 1
-
-
+enemySpawnX = (screenWidth `div` 2) + 100
+enemySpawnTimer :: Int
+enemySpawnTimer = 100
 
 data GameState = GameState {
                    gameObjects :: GameObjects
                  , state :: State
                  , score :: Int
                  , elapsedTime :: Float
+                 , lastEnemySpawn :: Int
+                 , rng :: StdGen
                  }
 
-data State = Start | InGame | Pause | End
+data State = Start | InGame | Pause | Won | Loss
+instance Eq State where 
+  (==) Start Start = True
+  (==) InGame InGame = True
+  (==) Pause Pause = True
+  (==) Won Won = True
+  (==) Loss Loss = True
+  (==) _ _ = False
 
 data GameObjects = GameObjects {
                    player :: Player
@@ -44,6 +61,7 @@ data GameObjects = GameObjects {
 data Player = Player {
                pposX :: Int
              , pposY :: Int
+             , psize :: Int
              , pspeed :: Int
              , plives :: Int
              }
@@ -51,16 +69,24 @@ data Player = Player {
 data Enemy = Enemy {
                eposX :: Int
              , eposY :: Int
+             , esize :: Int
              , espeed :: Int
              , elives :: Int
              }
+instance Eq Enemy where
+  Enemy posx1 posy1 size1 speed1 lives1 == Enemy posx2 posy2 size2 speed2 lives2 =
+    posx1 == posx2 && posy1 == posy2 && size1 == size2 && speed1 == speed2 && lives1 == lives2 
 
 data Bullet = Bullet {
                bposX :: Int
              , bposY :: Int
+             , bsize :: Int
              , bspeed :: Int 
              , btype :: BulletType
              }
+instance Eq Bullet where
+  Bullet posx1 posy1 size1 speed1 type1 == Bullet posx2 posy2 size2 speed2 type2 =
+    posx1 == posx2 && posy1 == posy2 && size1 == size2 && speed1 == speed2 && type1 == type2 
 
 data BulletType = BP | BE
 instance Eq BulletType where 
@@ -68,11 +94,11 @@ instance Eq BulletType where
   (==) BE BE = True
   (==) _ _ = False
 
-initialState :: GameState
-initialState = GameState startObjects Start 0 0
+initialState :: StdGen -> GameState
+initialState rng = GameState startObjects Start 0 0 0 rng
 
 startObjects = GameObjects startPlayer ([], spawnEnemyCycle) []
 
--- Player x y speed lives
+-- Player x y size speed lives
 startPlayer :: Player
-startPlayer = Player ((-screenWidth `div` 2) + 30) 0 0 3
+startPlayer = Player ((-screenWidth `div` 2) + 30) 0 30 0 3
