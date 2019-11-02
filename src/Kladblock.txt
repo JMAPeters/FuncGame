@@ -3,3 +3,11 @@ score van player naar gamestate
 bullet type is geen character maar een eigen type
 Bullet Speed
 Size Objects
+
+
+kan geen:
+score doorkrijgen
+kijken of de game over is
+
+
+rng werkt niet + game crash

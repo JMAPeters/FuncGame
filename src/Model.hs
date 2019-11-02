@@ -28,11 +28,11 @@ randomShoot :: Int
 randomShoot = 5
 
 spawnEnemyCycle :: [Int]
-spawnEnemyCycle = [8, 3]
+spawnEnemyCycle = [1 , 3 , 5 , 3 , 6, 8, 10 , 7, 20]
 enemySpawnX :: Int
 enemySpawnX = (screenWidth `div` 2) + 100
 enemySpawnTimer :: Int
-enemySpawnTimer = 100
+enemySpawnTimer = 150
 
 data GameState = GameState {
                    gameObjects :: GameObjects
