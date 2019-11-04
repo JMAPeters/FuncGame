@@ -74,7 +74,8 @@ spawnEnemy :: Int -> Int -> Enemy
 spawnEnemy waveNb y = Enemy (enemySpawnX + (150 * waveNb)) y enemySize maxEnemySpeed 1
 
 doCollision :: GameObjects -> (GameObjects, Int)
-doCollision go = (filterLists go (makeHitList go), getLength (makeHitList go))
+doCollision go = (filterLists go hitList, getLength hitList)
+        where hitList = makeHitList go
 
 makeHitList :: GameObjects -> (Int, [Enemy], [Bullet])
 makeHitList go = (checkPlayerCollision go, checkEnemies go, checkBullets go)
@@ -84,8 +85,8 @@ getLength (_, enemies, _) = length enemies
 
 checkEnemies :: GameObjects -> [Enemy]
 checkEnemies (GameObjects player ([], x) bullets) = []
-checkEnemies go@(GameObjects player ([enemy], x) bullets) = checkEnemyBullets enemy bullets 
-checkEnemies go@(GameObjects player ((enemy:enemies), x) bullets) = checkEnemyBullets enemy bullets ++ checkEnemies (GameObjects player (enemies, x) bullets)
+checkEnemies go@(GameObjects player ([enemy], x) bullets) = (checkEnemyBullets enemy bullets) ++ (checkEnemyPlayer enemy player) 
+checkEnemies go@(GameObjects player ((enemy:enemies), x) bullets) = checkEnemyBullets enemy bullets ++ (checkEnemyPlayer enemy player) ++ checkEnemies (GameObjects player (enemies, x) bullets)
 
 checkEnemyBullets :: Enemy -> [Bullet] -> [Enemy]
 checkEnemyBullets enemy [] = []
@@ -124,7 +125,7 @@ checkEnemyPlayer enemy player
                     | otherwise = []
 
 checkPlayerCollision :: GameObjects -> Int
-checkPlayerCollision (GameObjects player (enemies, x) bullets) = 0--length (filter (==True) ((map (\enemy -> checkHitBox (pposX player) (pposY player) (psize player) (eposX enemy) (eposY enemy) (esize enemy)) enemies) ++ (map (\bullet -> checkHitBox (pposX player) (pposY player) (psize player) (bposX bullet) (bposY bullet) (bsize bullet)) bullets)))
+checkPlayerCollision (GameObjects player (enemies, x) bullets) = length (filter (==True) ((map (\enemy -> checkHitBox (pposX player) (pposY player) (psize player) (eposX enemy) (eposY enemy) (esize enemy)) enemies) ++ [checkHitBox (pposX player) (pposY player) (psize player) (bposX bullet) (bposY bullet) (bsize bullet) | bullet <- bullets, (btype bullet) == BE ]))
 
 -- x1, y1, size first object, x2, y2, size second object, returns true if objects collide
 checkHitBox :: Int -> Int -> Int -> Int -> Int -> Int -> Bool 

@@ -56,6 +56,7 @@ data GameObjects = GameObjects {
                    player :: Player
                  , enemies :: ([Enemy], [Int])
                  , bullets :: [Bullet]
+                 --, animations :: [Animation]
                  }
 
 data Player = Player {
@@ -93,6 +94,12 @@ instance Eq BulletType where
   (==) BP BP = True
   (==) BE BE = True
   (==) _ _ = False
+
+data Animation = Animation {
+                 aposX :: Int
+               , aposY :: Int
+               , asize :: Int
+              }
 
 initialState :: StdGen -> GameState
 initialState rng = GameState startObjects Start 0 0 0 rng

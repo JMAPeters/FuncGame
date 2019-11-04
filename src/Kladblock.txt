@@ -11,3 +11,10 @@ kijken of de game over is
 
 
 rng werkt niet + game crash
+
+
+redo collision
+enemys hebben lives
+bullets checken en verwijderen met collision, enemy lives -1
+later over alle enemys en lives checken
+wel nog player en enemys laten checken
