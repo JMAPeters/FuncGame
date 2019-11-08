@@ -10,15 +10,18 @@ view gs = return $ chooseView gs
 
 chooseView :: GameState -> Picture
 chooseView gs@(GameState gameObjects state score elapsedTime enemyTime rng)
-   | state == Start = makeStartView
+   | state == Start = pictures [makeStartView, makeInfo]
    | state == InGame = pictures [makeGameView gameObjects, makeUI gs]
    | state == Pause = makePauseView gs
    | state == Won = makeWinView gs
-   -- | state == Loss = makeLossView gs
+   | state == Loss = makeLossView gs
    | otherwise = color green (text "Error")
 
 makeStartView :: Picture
 makeStartView = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Shoot'em Up! Press F1 to start!"))
+
+makeInfo :: Picture
+makeInfo = translate (-500) (-50) $ Scale 0.2 0.2 $ color green (text ("Move Up and Down with the arrow key and shoot with the space bar"))
 
 makeGameView :: GameObjects -> Picture
 makeGameView go = pictures ([drawPlayer (player $ go), drawText (animations $ go)] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
@@ -31,6 +34,9 @@ makePauseView gs = pictures ([drawPauseText, drawScoreMenu gs])
 makeWinView :: GameState -> Picture
 makeWinView gs = pictures ([drawWinText, drawScoreMenu gs])
 
+makeLossView :: GameState -> Picture
+makeLossView gs gs = pictures ([drawLossText, drawScoreMenu gs])
+
 drawPauseText :: Picture
 drawPauseText = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Pause! Press F1 to continue!"))
 
@@ -39,6 +45,9 @@ drawScoreMenu gs = translate (-100) (-100) $ Scale 0.5 0.5 $ color green (text (
 
 drawWinText :: Picture
 drawWinText = translate (-100) (0) $ Scale 0.5 0.5 $ color green (text ("You Won!"))
+
+drawWinText :: Picture
+drawWinText = translate (-100) (0) $ Scale 0.5 0.5 $ color green (text ("You Lost!"))
 
 drawPlayer :: Player -> Picture
 drawPlayer player = translate (fromIntegral (pposX $ player)) (fromIntegral (pposY $ player)) $ color blue $ circleSolid (fromIntegral(psize player))
