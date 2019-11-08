@@ -22,6 +22,8 @@ playerSize :: Int
 playerSize = 30 
 enemySize :: Int
 enemySize = 30
+animationSize :: Int
+animationSize = 45
 bulletSize :: Int
 bulletSize = 10
 randomShoot :: Int
@@ -56,7 +58,7 @@ data GameObjects = GameObjects {
                    player :: Player
                  , enemies :: ([Enemy], [Int])
                  , bullets :: [Bullet]
-                 --, animations :: [Animation]
+                 , animations :: [Animation]
                  }
 
 data Player = Player {
@@ -104,7 +106,7 @@ data Animation = Animation {
 initialState :: StdGen -> GameState
 initialState rng = GameState startObjects Start 0 0 0 rng
 
-startObjects = GameObjects startPlayer ([], spawnEnemyCycle) []
+startObjects = GameObjects startPlayer ([], spawnEnemyCycle) [] []
 
 -- Player x y size speed lives
 startPlayer :: Player

@@ -7,6 +7,7 @@ import Model
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
+import Data.List
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
@@ -18,16 +19,15 @@ step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng)
     | otherwise = 
         return $ gs {elapsedTime = elapsedTime + secs}
 
-doAllSteps :: GameState -> Int -> GameState
 doAllSteps gs n
         | n >= enemySpawnTimer = unTuple gs 0 (doMainSteps ((gameObjects $ gs) { enemies = enemySpawner(enemies $ gameObjects $ gs)}) (rng $ gs))
         | otherwise = unTuple gs n (doMainSteps (gameObjects $ gs) (rng $ gs))
 
 unTuple :: GameState -> Int -> (GameObjects, Int) -> GameState
 unTuple (GameState gameObjects state score elapsedTime lastEnemySpawn rng) n (go, points) = (GameState go state (score+points) elapsedTime n rng)
--- return tuple van GameObject en Score 
+
 doMainSteps :: GameObjects -> StdGen -> (GameObjects, Int)
-doMainSteps (GameObjects player (enemies, x) bullets) rng = doCollision (GameObjects (movePlayer player) ((moveEnemies enemies), x) (moveBullets bullets{-(spawnRandomBullets bullets enemies rng)-}))
+doMainSteps (GameObjects player (enemies, x) bullets animations) rng = checkCollision (GameObjects (movePlayer player) ((moveEnemies enemies), x) (moveBullets bullets{-(spawnRandomBullets bullets enemies rng)-}) (playAnimation animations) )
 
 -- laat het step event de speler bewegen op basis van de speed
 movePlayer :: Player -> Player
@@ -73,72 +73,50 @@ waveSpawner (wave:waves) waveNb = (map (\n -> spawnEnemy waveNb (-(fromIntegral 
 spawnEnemy :: Int -> Int -> Enemy 
 spawnEnemy waveNb y = Enemy (enemySpawnX + (150 * waveNb)) y enemySize maxEnemySpeed 1
 
-doCollision :: GameObjects -> (GameObjects, Int)
-doCollision go = (filterLists go hitList, getLength hitList)
-        where hitList = makeHitList go
+checkCollision :: GameObjects -> (GameObjects, Int)
+checkCollision go@(GameObjects player (enemies, x) bullets _) = filterHitList go (checkBPEnemy enemies bullets) (checkPlayerBEEnemy player enemies bullets)
 
-makeHitList :: GameObjects -> (Int, [Enemy], [Bullet])
-makeHitList go = (checkPlayerCollision go, checkEnemies go, checkBullets go)
+filterHitList :: GameObjects -> [(Bullet, Enemy)] -> ([(Player, Enemy)], [(Player, Bullet)]) -> (GameObjects, Int)
+filterHitList (GameObjects player (enemies, x) bullets animations) bulletEnemy (playerEnemy, playerBullet) = (GameObjects (decLives player (length playerEnemy + length playerBullet)) ((filter (\enemy -> (enemy `notElem` enemiesHit)) enemies), x) (filter (\bullet -> (bullet `notElem` bulletsHit)) bullets) ((makeAnimations enemiesHit) ++ animations), (length enemiesHit))
+        where   enemiesHit = map snd bulletEnemy ++ map snd playerEnemy
+                bulletsHit = map fst bulletEnemy ++ map snd playerBullet
 
-getLength :: (Int, [Enemy], [Bullet]) -> Int
-getLength (_, enemies, _) = length enemies
+-- krijgt de Enemy hit List mee en returned ALLE animatIONz
+makeAnimations :: [Enemy] -> [Animation]
+makeAnimations enemies = map(\enemy -> Animation (eposX enemy) (eposY enemy) 0) enemies
 
-checkEnemies :: GameObjects -> [Enemy]
-checkEnemies (GameObjects player ([], x) bullets) = []
-checkEnemies go@(GameObjects player ([enemy], x) bullets) = (checkEnemyBullets enemy bullets) ++ (checkEnemyPlayer enemy player) 
-checkEnemies go@(GameObjects player ((enemy:enemies), x) bullets) = checkEnemyBullets enemy bullets ++ (checkEnemyPlayer enemy player) ++ checkEnemies (GameObjects player (enemies, x) bullets)
+playAnimation :: [Animation] -> [Animation]
+playAnimation [] = []
+playAnimation ((Animation x y size):animations)
+                | (size) < animationSize = (Animation x y (size + 5)) : playAnimation animations
+                | otherwise = [] ++ playAnimation animations
 
-checkEnemyBullets :: Enemy -> [Bullet] -> [Enemy]
-checkEnemyBullets enemy [] = []
-checkEnemyBullets enemy [bullet]
-                | checkHitBox (eposX enemy) (eposY enemy) (esize enemy) (bposX bullet) (bposY bullet) (bsize bullet) = [enemy]
-                | otherwise = []
-checkEnemyBullets enemy (bullet:bullets) 
-                | checkHitBox (eposX enemy) (eposY enemy) (esize enemy) (bposX bullet) (bposY bullet) (bsize bullet) = [enemy]
-                | otherwise = checkEnemyBullets enemy bullets
+checkBPEnemy :: [Enemy] -> [Bullet] -> [(Bullet, Enemy)]
+checkBPEnemy enemies bullets = map (\index -> listOfBulletEnemy !! index)(listOfIndex listOfHit)
+        where   listOfBulletEnemy = [(bullet,enemy) | enemy <- enemies, bullet <- bullets, (btype $ bullet) == BP ]
+                listOfHit = map checkBulletEnemy listOfBulletEnemy
+                listOfIndex list = elemIndices True list
+                checkBulletEnemy (bullet,enemy) = checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (eposX enemy) (eposY enemy) (esize enemy)
 
-checkBullets :: GameObjects -> [Bullet]
-checkBullets go@(GameObjects player (enemies, x) [bullet])
-            | (btype bullet) == BP = checkBulletEnemy bullet enemies
-            | otherwise = checkBulletPlayer bullet player
-checkBullets go@(GameObjects player (enemies, x) (bullet:bullets))
-            | (btype bullet) == BP = checkBulletEnemy bullet enemies ++ checkBullets (GameObjects player (enemies, x) bullets)
-            | otherwise = checkBulletPlayer bullet player ++ checkBullets (GameObjects player (enemies, x) bullets)
-
-checkBulletEnemy :: Bullet -> [Enemy] -> [Bullet]
-checkBulletEnemy bullet [] = []
-checkBulletEnemy bullet [enemy]
-            | checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (eposX enemy) (eposY enemy) (esize enemy) = [bullet]
-            | otherwise = []
-checkBulletEnemy bullet (enemy: enemies)
-            | checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (eposX enemy) (eposY enemy) (esize enemy) = [bullet]
-            | otherwise = checkBulletEnemy bullet enemies
-
-checkBulletPlayer :: Bullet -> Player -> [Bullet]            
-checkBulletPlayer bullet player
-                    | checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (pposX player) (pposY player) (psize player) = [bullet]
-                    | otherwise = []
-
-checkEnemyPlayer :: Enemy -> Player -> [Enemy]            
-checkEnemyPlayer enemy player
-                    | checkHitBox (eposX enemy) (eposY enemy) (esize enemy) (pposX player) (pposY player) (psize player) = [enemy]
-                    | otherwise = []
-
-checkPlayerCollision :: GameObjects -> Int
-checkPlayerCollision (GameObjects player (enemies, x) bullets) = length (filter (==True) ((map (\enemy -> checkHitBox (pposX player) (pposY player) (psize player) (eposX enemy) (eposY enemy) (esize enemy)) enemies) ++ [checkHitBox (pposX player) (pposY player) (psize player) (bposX bullet) (bposY bullet) (bsize bullet) | bullet <- bullets, (btype bullet) == BE ]))
+checkPlayerBEEnemy :: Player -> [Enemy] -> [Bullet] -> ([(Player, Enemy)], [(Player, Bullet)])
+checkPlayerBEEnemy player enemies bullets = (map (\index -> listOfEnemy !! index)(listOfIndex listOfHitEnemy), map (\index -> listOfBullet !! index)(listOfIndex listOfHitBullet)) 
+        where   listOfEnemy = [(player,enemy) | enemy <- enemies]
+                listOfHitEnemy = map checkPlayerEnemy listOfEnemy                
+                listOfBullet = [(player,bullet) | bullet <- bullets, (btype $ bullet) == BE]
+                listOfHitBullet = map checkPlayerBullet listOfBullet
+                listOfIndex = elemIndices True
+                checkPlayerEnemy (player,enemy) = checkHitBox (pposX player) (pposY player) (psize player) (eposX enemy) (eposY enemy) (esize enemy)
+                checkPlayerBullet (player,bullet) = checkHitBox (pposX player) (pposY player) (psize player) (bposX bullet) (bposY bullet) (bsize bullet)
 
 -- x1, y1, size first object, x2, y2, size second object, returns true if objects collide
 checkHitBox :: Int -> Int -> Int -> Int -> Int -> Int -> Bool 
 checkHitBox x1 y1 s1 x2 y2 s2 = ((x1-x2)^2 + (y1-y2)^2) < (s1 + s2)^2
 
-filterLists :: GameObjects -> (Int, [Enemy], [Bullet]) -> GameObjects
-filterLists (GameObjects player (enemies, x) bullets) (playerHit, enemiesHit, bulletsHit) = GameObjects (decLives player playerHit) ((filter (\enemy -> (enemy `notElem` enemiesHit)) enemies), x) (filter (\bullet -> (bullet `notElem` bulletsHit)) bullets)
-
 decLives :: Player -> Int -> Player
 decLives (Player x y size speed lives) hit = Player x y size speed (lives - hit)
 
 checkWinLoss :: GameState -> GameState
-checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ ) _ _ _ _ _)
+checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ _ ) _ _ _ _ _)
         | (plives $ player) <= 0 = gs {state = Loss}
         | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won}
         | otherwise = gs

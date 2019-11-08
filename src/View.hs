@@ -21,7 +21,7 @@ makeStartView :: Picture
 makeStartView = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Shoot'em Up! Press F1 to start!"))
 
 makeGameView :: GameObjects -> Picture
-makeGameView go = pictures ([drawPlayer (player $ go), drawText (enemies $ go)] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go))
+makeGameView go = pictures ([drawPlayer (player $ go), drawText (animations $ go)] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
 
 makeUI gs = pictures ([drawScore gs, drawLives gs])
 
@@ -55,10 +55,16 @@ drawBullets bullets = map drawBullet bullets
 drawBullet :: Bullet -> Picture
 drawBullet bullet = translate (fromIntegral (bposX $ bullet)) (fromIntegral (bposY $ bullet)) $ color green $ circleSolid (fromIntegral(bsize bullet))
 
+drawAnimations :: [Animation] -> [Picture]
+drawAnimations animations = map drawAnimation animations
+
+drawAnimation :: Animation -> Picture
+drawAnimation animation = translate (fromIntegral (aposX $ animation)) (fromIntegral (aposY $ animation)) $ color orange $ circle (fromIntegral(asize animation))
+
 drawScore :: GameState -> Picture
 drawScore gs = Translate (-600) (-350) $ Scale 0.2 0.2 $ Color white $ text ("Score: " ++ (show (score gs)))
 
 drawLives :: GameState -> Picture
 drawLives gs = Translate (-600) (-320) $ Scale 0.2 0.2 $ Color white $ text ("Lives: " ++ (show (plives $ player $ gameObjects $ gs)))
 
-drawText (enemies, _) = color green (text (show(length enemies)))
+drawText (animations) = color green (text (show(length animations)))
