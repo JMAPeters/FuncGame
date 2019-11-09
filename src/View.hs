@@ -4,16 +4,18 @@ module View where
 
 import Graphics.Gloss
 import Model
+import Controller
+import System.Random
 
 view :: GameState -> IO Picture
 view gs = return $ chooseView gs
 
 chooseView :: GameState -> Picture
-chooseView gs@(GameState gameObjects state score elapsedTime enemyTime rng)
-   | state == Start = pictures [makeStartView, makeInfo]
-   | state == InGame = pictures [makeGameView gameObjects, makeUI gs]
+chooseView gs@(GameState gameObjects state score elapsedTime enemyTime rng hs)
+   | state == Start = pictures [makeStartView, makeInfo, makeHS hs]
+   | state == InGame = pictures [makeGameView gameObjects rng, makeUI gs]
    | state == Pause = makePauseView gs
-   | state == Won = makeWinView gs
+   | state == Won = pictures [makeWinView gs, makeHS hs]
    | state == Loss = makeLossView gs
    | otherwise = color green (text "Error")
 
@@ -23,8 +25,11 @@ makeStartView = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Shoot
 makeInfo :: Picture
 makeInfo = translate (-500) (-50) $ Scale 0.2 0.2 $ color green (text ("Move Up and Down with the arrow key and shoot with the space bar"))
 
-makeGameView :: GameObjects -> Picture
-makeGameView go = pictures ([drawPlayer (player $ go), drawText (animations $ go)] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
+makeHS :: Int -> Picture
+makeHS hs = translate (-200) (-150) $ Scale 0.5 0.5 $ color green (text ("Highscore: " ++ (show hs)))
+
+makeGameView :: GameObjects -> StdGen -> Picture
+makeGameView go rng = pictures ([drawPlayer (player $ go){-, drawText (r (0, randomShoot) rng)-}] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
 
 makeUI gs = pictures ([drawScore gs, drawLives gs])
 
@@ -35,8 +40,7 @@ makeWinView :: GameState -> Picture
 makeWinView gs = pictures ([drawWinText, drawScoreMenu gs])
 
 makeLossView :: GameState -> Picture
-makeLossView gs gs = pictures ([drawLossText, drawScoreMenu gs])
-
+makeLossView gs = pictures ([drawLossText, drawScoreMenu gs])
 drawPauseText :: Picture
 drawPauseText = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Pause! Press F1 to continue!"))
 
@@ -46,8 +50,8 @@ drawScoreMenu gs = translate (-100) (-100) $ Scale 0.5 0.5 $ color green (text (
 drawWinText :: Picture
 drawWinText = translate (-100) (0) $ Scale 0.5 0.5 $ color green (text ("You Won!"))
 
-drawWinText :: Picture
-drawWinText = translate (-100) (0) $ Scale 0.5 0.5 $ color green (text ("You Lost!"))
+drawLossText :: Picture
+drawLossText = translate (-100) (0) $ Scale 0.5 0.5 $ color green (text ("You Lost!"))
 
 drawPlayer :: Player -> Picture
 drawPlayer player = translate (fromIntegral (pposX $ player)) (fromIntegral (pposY $ player)) $ color blue $ circleSolid (fromIntegral(psize player))
@@ -76,4 +80,4 @@ drawScore gs = Translate (-600) (-350) $ Scale 0.2 0.2 $ Color white $ text ("Sc
 drawLives :: GameState -> Picture
 drawLives gs = Translate (-600) (-320) $ Scale 0.2 0.2 $ Color white $ text ("Lives: " ++ (show (plives $ player $ gameObjects $ gs)))
 
-drawText (animations) = color green (text (show(length animations)))
+drawText (x,_) = color green (text (show x))

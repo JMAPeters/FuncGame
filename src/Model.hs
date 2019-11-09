@@ -27,7 +27,7 @@ animationSize = 45
 bulletSize :: Int
 bulletSize = 10
 randomShoot :: Int
-randomShoot = 5
+randomShoot = 50
 
 spawnEnemyCycle :: [Int]
 spawnEnemyCycle = [1 , 3 , 5 , 3 , 6, 8, 10 , 7, 20]
@@ -43,6 +43,7 @@ data GameState = GameState {
                  , elapsedTime :: Float
                  , lastEnemySpawn :: Int
                  , rng :: StdGen
+                 , highScore :: Int
                  }
 
 data State = Start | InGame | Pause | Won | Loss
@@ -103,8 +104,8 @@ data Animation = Animation {
                , asize :: Int
               }
 
-initialState :: StdGen -> GameState
-initialState rng = GameState startObjects Start 0 0 0 rng
+initialState :: StdGen -> Int -> GameState
+initialState rng hs = GameState startObjects Start 0 0 0 rng hs
 
 startObjects = GameObjects startPlayer ([], spawnEnemyCycle) [] []
 

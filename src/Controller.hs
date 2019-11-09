@@ -11,7 +11,7 @@ import Data.List
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng)
+step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng hs)
     | state /= InGame
         = return $ gs
     | elapsedTime + secs > nO_SECS_BETWEEN_CYCLES
@@ -20,14 +20,14 @@ step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng)
         return $ gs {elapsedTime = elapsedTime + secs}
 
 doAllSteps gs n
-        | n >= enemySpawnTimer = unTuple gs 0 (doMainSteps ((gameObjects $ gs) { enemies = enemySpawner(enemies $ gameObjects $ gs)}) (rng $ gs))
-        | otherwise = unTuple gs n (doMainSteps (gameObjects $ gs) (rng $ gs))
+        | n >= enemySpawnTimer = spawnRandomBullets (unTuple gs 0 (doMainSteps ((gameObjects $ gs) { enemies = enemySpawner(enemies $ gameObjects $ gs)}) (rng $ gs)))
+        | otherwise = spawnRandomBullets (unTuple gs n (doMainSteps (gameObjects $ gs) (rng $ gs)))
 
 unTuple :: GameState -> Int -> (GameObjects, Int) -> GameState
-unTuple (GameState gameObjects state score elapsedTime lastEnemySpawn rng) n (go, points) = (GameState go state (score+points) elapsedTime n rng)
+unTuple (GameState gameObjects state score elapsedTime lastEnemySpawn rng hs) n (go, points) = (GameState go state (score+points) elapsedTime n rng hs)
 
 doMainSteps :: GameObjects -> StdGen -> (GameObjects, Int)
-doMainSteps (GameObjects player (enemies, x) bullets animations) rng = checkCollision (GameObjects (movePlayer player) ((moveEnemies enemies), x) (moveBullets bullets{-(spawnRandomBullets bullets enemies rng)-}) (playAnimation animations) )
+doMainSteps (GameObjects player (enemies, x) bullets animations) rng = checkCollision (GameObjects (movePlayer player) ((moveEnemies enemies), x) (moveBullets bullets) (playAnimation animations) )
 
 -- laat het step event de speler bewegen op basis van de speed
 movePlayer :: Player -> Player
@@ -44,7 +44,8 @@ moveBullet (Bullet x y size speed btype)
                 | otherwise = Bullet (x - speed) y size speed btype
 
 deleteBullets :: Bullet -> Bool
-deleteBullets bullet = (((bposX bullet) > -(fromIntegral screenWidth `div` 2)) && ((bposX bullet) < (fromIntegral screenWidth `div` 2)))
+deleteBullets bullet | (btype bullet) == BP = ((bposX bullet) > -(fromIntegral screenWidth `div` 2))
+                     | otherwise = ((bposX bullet) < (fromIntegral screenWidth `div` 2))
 
 moveEnemies :: [Enemy] -> [Enemy]
 moveEnemies enemies = filter (\enemy -> deleteEnemy enemy) (map moveEnemy enemies)
@@ -116,21 +117,24 @@ decLives :: Player -> Int -> Player
 decLives (Player x y size speed lives) hit = Player x y size speed (lives - hit)
 
 checkWinLoss :: GameState -> GameState
-checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ _ ) _ _ _ _ _)
+checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ _ ) _ score _ _ _ hs)
         | (plives $ player) <= 0 = gs {state = Loss}
-        | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won}
+        | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won, highScore = checkHighScore score hs}
         | otherwise = gs
 
-spawnRandomBullets :: [Bullet] -> [Enemy] -> StdGen -> [Bullet]
-spawnRandomBullets bullets [] _ = bullets 
-spawnRandomBullets bullets [enemy] rng
-                            | 1 >= randomShoot = makeEnemyBullet enemy : bullets
-                            | otherwise = bullets
-spawnRandomBullets bullets (enemy: enemies) rng
-                            | 1 >= randomShoot = makeEnemyBullet enemy : bullets ++ spawnRandomBullets bullets enemies rng
-                            | otherwise = bullets ++ spawnRandomBullets bullets enemies rng
+checkHighScore :: Int -> Int -> Int
+checkHighScore score hs | score > hs = score
+                        | otherwise = hs
 
-                            --(head (randomRs (0, randomShoot + 1) rng))
+spawnRandomBullets :: GameState -> GameState
+spawnRandomBullets gs@(GameState (GameObjects _ ([], spawnCycle) _ _ ) _ _ _ _ _ _) = gs
+spawnRandomBullets gs@(GameState gameobjects@(GameObjects player (enemies, spawnCycle) bullets animations ) state score elapsedTime lastEnemySpawn rng hs) = let (enemyBullets, newRng) = randomBullets enemies rng
+                                                                                                                                                          in GameState (GameObjects player (enemies,spawnCycle) (bullets ++ enemyBullets) animations) state score elapsedTime lastEnemySpawn newRng hs
+
+randomBullets :: [Enemy] -> StdGen -> ([Bullet], StdGen)
+randomBullets enemies rng = let (numb, newRng) = randomR (0, randomShoot) rng
+                            in ([makeEnemyBullet enemy | enemy <- enemies, numb >= randomShoot], newRng)
+
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
 input e gs = return (inputKey e gs)
@@ -153,7 +157,7 @@ inputKey (EventKey (SpecialKey k) state _ _) gs
 inputKey _ gs = gs
 
 toggleState :: GameState -> GameState
-toggleState gs@(GameState go state score elapsedTime enemyTime rng)
+toggleState gs@(GameState _ state _ _ _ _ _)
             | state == Start = gs {state = InGame}
             | state == InGame = gs {state = Pause}
             | state == Pause = gs {state = InGame}
@@ -164,7 +168,7 @@ checkPos player = (fromIntegral((pposY player) + (pspeed player)) < (fromIntegra
 
 -- Bullet x y type
 makePlayerBullet :: Player -> Bullet
-makePlayerBullet player = Bullet (pposX player + 10 ) (pposY player) bulletSize maxBulletSpeed BP
+makePlayerBullet player = Bullet (pposX player + 30 ) (pposY player) bulletSize maxBulletSpeed BP
 
 makeEnemyBullet :: Enemy -> Bullet 
-makeEnemyBullet enemy = Bullet (eposX enemy - 10) (eposY enemy) bulletSize maxBulletSpeed BE
+makeEnemyBullet enemy = Bullet (eposX enemy) (eposY enemy) bulletSize maxBulletSpeed BE
