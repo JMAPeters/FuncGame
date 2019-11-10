@@ -11,7 +11,9 @@ import Data.List
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng hs)
+step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng hs) 
+--    | state == Won
+--        = writeFile "textFiles/hs.txt" (show score)
     | state /= InGame
         = return $ gs
     | elapsedTime + secs > nO_SECS_BETWEEN_CYCLES
@@ -130,7 +132,7 @@ decLives (Player x y size speed lives) hit = Player x y size speed (lives - hit)
 checkWinLoss :: GameState -> GameState
 checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ _ ) _ score _ _ _ hs)
         | (plives $ player) <= 0 = gs {state = Loss}
-        | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won, highScore = checkHighScore score hs}
+        | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won, highScore = checkHighScore score hs }
         | otherwise = gs
 
 checkHighScore :: Int -> Int -> Int
