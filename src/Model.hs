@@ -27,7 +27,7 @@ animationSize = 45
 bulletSize :: Int
 bulletSize = 10
 randomShoot :: Int
-randomShoot = 50
+randomShoot = 100
 
 -- | Enemy spawn pattern
 spawnEnemyCycle :: [Int]
@@ -113,7 +113,6 @@ initialState :: StdGen -> Int -> GameState
 initialState rng hs = GameState startObjects Start 0 0 0 rng hs
 
 startObjects = GameObjects startPlayer ([], spawnEnemyCycle) [] []
-
 
 startPlayer :: Player
 startPlayer = Player ((-screenWidth `div` 2) + 30) 0 30 0 3

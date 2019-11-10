@@ -9,6 +9,7 @@ import System.Random
 view :: GameState -> IO Picture
 view gs = return $ chooseView gs
 
+-- | choose with view to print
 chooseView :: GameState -> Picture
 chooseView gs@(GameState gameObjects state score elapsedTime enemyTime rng hs)
    | state == Start = pictures [makeStartView, makeInfo, makeHS hs]
@@ -28,7 +29,7 @@ makeHS :: Int -> Picture
 makeHS hs = translate (-200) (-150) $ Scale 0.5 0.5 $ color green (text ("Highscore: " ++ (show hs)))
 
 makeGameView :: GameObjects -> StdGen -> Picture
-makeGameView go rng = pictures ([drawPlayer (player $ go){-, drawText (r (0, randomShoot) rng)-}] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
+makeGameView go rng = pictures ([drawPlayer (player $ go)] ++ drawEnemys (enemies $ go) ++ drawBullets (bullets $ go) ++ drawAnimations (animations $ go))
 
 makeUI gs = pictures ([drawScore gs, drawLives gs])
 
@@ -80,4 +81,4 @@ drawScore gs = Translate (-600) (-350) $ Scale 0.2 0.2 $ Color white $ text ("Sc
 drawLives :: GameState -> Picture
 drawLives gs = Translate (-600) (-320) $ Scale 0.2 0.2 $ Color white $ text ("Lives: " ++ (show (plives $ player $ gameObjects $ gs)))
 
-drawText (x,_) = color green (text (show x))
+--drawText (x,_) = color green (text (show x))

@@ -12,8 +12,9 @@ import Data.List
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
 step secs gs@(GameState gameObjects state score elapsedTime lastEnemySpawn rng hs) 
---    | state == Won
---        = writeFile "textFiles/hs.txt" (show score)
+    | state == Won
+          = do writeFile "textFiles/hs.txt" (show hs)
+               return $ gs
     | state /= InGame
         = return $ gs
     | elapsedTime + secs > nO_SECS_BETWEEN_CYCLES
@@ -109,7 +110,7 @@ playAnimation ((Animation x y size):animations)
                 | (size) < animationSize = (Animation x y (size + 5)) : playAnimation animations
                 | otherwise = [] ++ playAnimation animations
 
--- | Check of player bullets have collision with the enemies    ??????            
+-- | Check if player bullets have collision with the enemies         
 checkBPEnemy :: [Enemy] -> [Bullet] -> [(Bullet, Enemy)]
 checkBPEnemy enemies bullets = map (\index -> listOfBulletEnemy !! index)(listOfIndex listOfHit)
         where   listOfBulletEnemy = [(bullet,enemy) | enemy <- enemies, bullet <- bullets, (btype $ bullet) == BP ]
@@ -117,7 +118,7 @@ checkBPEnemy enemies bullets = map (\index -> listOfBulletEnemy !! index)(listOf
                 listOfIndex list = elemIndices True list
                 checkBulletEnemy (bullet,enemy) = checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (eposX enemy) (eposY enemy) (esize enemy)
 
--- |      ??????          
+-- | Check if the player collides with enemy or enemy bullets      
 checkPlayerBEEnemy :: Player -> [Enemy] -> [Bullet] -> ([(Player, Enemy)], [(Player, Bullet)])
 checkPlayerBEEnemy player enemies bullets = (map (\index -> listOfEnemy !! index)(listOfIndex listOfHitEnemy), map (\index -> listOfBullet !! index)(listOfIndex listOfHitBullet)) 
         where   listOfEnemy = [(player,enemy) | enemy <- enemies]
@@ -153,7 +154,7 @@ spawnRandomBullets :: GameState -> GameState
 spawnRandomBullets gs@(GameState (GameObjects _ ([], spawnCycle) _ _ ) _ _ _ _ _ _) = gs
 spawnRandomBullets gs@(GameState gameobjects@(GameObjects player (enemies, spawnCycle) bullets animations ) state score elapsedTime lastEnemySpawn rng hs) = let (enemyBullets, newRng) = randomBullets enemies rng
                                                                                                                                                           in GameState (GameObjects player (enemies,spawnCycle) (bullets ++ enemyBullets) animations) state score elapsedTime lastEnemySpawn newRng hs
-
+                                                                                                                                                          
 randomBullets :: [Enemy] -> StdGen -> ([Bullet], StdGen)
 randomBullets enemies rng = let (numb, newRng) = randomR (0, randomShoot) rng
                             in ([makeEnemyBullet enemy | enemy <- enemies, numb >= randomShoot], newRng)
@@ -188,7 +189,7 @@ toggleState gs@(GameState _ state _ _ _ _ _)
             | state == Pause = gs {state = InGame}
             | otherwise = gs
 
--- |     ????       
+-- | Check if player is in the screen       
 checkPos :: Player -> Bool
 checkPos player = (fromIntegral((pposY player) + (pspeed player)) < (fromIntegral screenHeight/2)) && (fromIntegral((pposY player) + (pspeed player)) > -(fromIntegral screenHeight/2))
 
