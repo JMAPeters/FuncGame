@@ -27,7 +27,7 @@ doAllSteps gs n
 unTuple :: GameState -> Int -> (GameObjects, Int) -> GameState
 unTuple (GameState gameObjects state score elapsedTime lastEnemySpawn rng hs) n (go, points) = (GameState go state (score+points) elapsedTime n rng hs)
 
--- | Checks all Game Entities for every step
+-- | Checks all Game Entities for change every step
 doMainSteps :: GameObjects -> StdGen -> (GameObjects, Int)
 doMainSteps (GameObjects player (enemies, x) bullets animations) rng = checkCollision (GameObjects (movePlayer player) ((moveEnemies enemies), x) (moveBullets bullets) (playAnimation animations) )
 
@@ -64,44 +64,50 @@ moveEnemy (Enemy x y size speed lives) = Enemy (x - speed) y size speed lives
 deleteEnemy :: Enemy -> Bool
 deleteEnemy enemy = ((eposX enemy) > -(fromIntegral screenWidth `div` 2))
 
--- | 
+-- | Enemy Spawn pattern, is passed on the SpawnEnemyCycle
 enemySpawner :: ([Enemy], [Int]) -> ([Enemy], [Int])
 enemySpawner ( enemies , [] ) = (enemies, [])
 enemySpawner ( enemies , [x]) = (enemies ++ waveSpawner (makeWaves x) 0, [])
 enemySpawner ( enemies , (x:xs)) = (enemies ++ waveSpawner (makeWaves x) 0, xs)
 
--- | Generates the enemy attact waves
+-- | Generates the enemy attact waves from SpawnEnemyCycle
 makeWaves :: Int -> [Int]
 makeWaves n
         | n - 5 >= 0 = 5 : makeWaves (n - 5)
         | otherwise = [n]
 
+-- | One single wave          
 waveSpawner :: [Int] -> Int -> [Enemy]
 waveSpawner [] _ = []
 waveSpawner [wave] waveNb = (map (\n -> spawnEnemy waveNb (-(fromIntegral screenHeight `div` 2) + ((screenHeight `div` (wave + 1)) * n))) [1 .. wave])
 waveSpawner (wave:waves) waveNb = (map (\n -> spawnEnemy waveNb (-(fromIntegral screenHeight `div` 2) + ((screenHeight `div` (wave + 1)) * n))) [1 .. wave]) ++ waveSpawner waves (waveNb + 1)
 
+-- | Spawns one single enemy
 spawnEnemy :: Int -> Int -> Enemy 
 spawnEnemy waveNb y = Enemy (enemySpawnX + (150 * waveNb)) y enemySize maxEnemySpeed 1
 
+-- | Checks for collision between two game entities, based up on the #enemies hits the Interger in the tuple is passed on as the score.
 checkCollision :: GameObjects -> (GameObjects, Int)
 checkCollision go@(GameObjects player (enemies, x) bullets _) = filterHitList go (checkBPEnemy enemies bullets) (checkPlayerBEEnemy player enemies bullets)
 
+-- | Creates a new tuple based upon all the game entities who got hit. For the enemy hit list the length will determine the score
 filterHitList :: GameObjects -> [(Bullet, Enemy)] -> ([(Player, Enemy)], [(Player, Bullet)]) -> (GameObjects, Int)
 filterHitList (GameObjects player (enemies, x) bullets animations) bulletEnemy (playerEnemy, playerBullet) = (GameObjects (decLives player (length playerEnemy + length playerBullet)) ((filter (\enemy -> (enemy `notElem` enemiesHit)) enemies), x) (filter (\bullet -> (bullet `notElem` bulletsHit)) bullets) ((makeAnimations enemiesHit) ++ animations), (length enemiesHit))
         where   enemiesHit = map snd bulletEnemy ++ map snd playerEnemy
                 bulletsHit = map fst bulletEnemy ++ map snd playerBullet
 
--- krijgt de Enemy hit List mee en returned ALLE animatIONz
+-- | Takes in the Enemy Hit list and for the enemies who got hit creates an animation
 makeAnimations :: [Enemy] -> [Animation]
 makeAnimations enemies = map(\enemy -> Animation (eposX enemy) (eposY enemy) 0) enemies
 
+-- | Play the animation 
 playAnimation :: [Animation] -> [Animation]
 playAnimation [] = []
 playAnimation ((Animation x y size):animations)
                 | (size) < animationSize = (Animation x y (size + 5)) : playAnimation animations
                 | otherwise = [] ++ playAnimation animations
 
+-- | Check of player bullets have collision with the enemies    ??????            
 checkBPEnemy :: [Enemy] -> [Bullet] -> [(Bullet, Enemy)]
 checkBPEnemy enemies bullets = map (\index -> listOfBulletEnemy !! index)(listOfIndex listOfHit)
         where   listOfBulletEnemy = [(bullet,enemy) | enemy <- enemies, bullet <- bullets, (btype $ bullet) == BP ]
@@ -109,6 +115,7 @@ checkBPEnemy enemies bullets = map (\index -> listOfBulletEnemy !! index)(listOf
                 listOfIndex list = elemIndices True list
                 checkBulletEnemy (bullet,enemy) = checkHitBox (bposX bullet) (bposY bullet) (bsize bullet) (eposX enemy) (eposY enemy) (esize enemy)
 
+-- |      ??????          
 checkPlayerBEEnemy :: Player -> [Enemy] -> [Bullet] -> ([(Player, Enemy)], [(Player, Bullet)])
 checkPlayerBEEnemy player enemies bullets = (map (\index -> listOfEnemy !! index)(listOfIndex listOfHitEnemy), map (\index -> listOfBullet !! index)(listOfIndex listOfHitBullet)) 
         where   listOfEnemy = [(player,enemy) | enemy <- enemies]
@@ -127,16 +134,19 @@ checkHitBox x1 y1 s1 x2 y2 s2 = ((x1-x2)^2 + (y1-y2)^2) < (s1 + s2)^2
 decLives :: Player -> Int -> Player
 decLives (Player x y size speed lives) hit = Player x y size speed (lives - hit)
 
+-- | Check if the player is still alive, if so check the enemy spawnCycle to know if to keep playing
 checkWinLoss :: GameState -> GameState
 checkWinLoss gs@(GameState (GameObjects player (enemies, spawnCycle) _ _ ) _ score _ _ _ hs)
         | (plives $ player) <= 0 = gs {state = Loss}
         | (length spawnCycle) == 0 && (length enemies == 0) = gs {state = Won, highScore = checkHighScore score hs}
         | otherwise = gs
 
+-- | Check if achieved score is higher then actual high score.        
 checkHighScore :: Int -> Int -> Int
 checkHighScore score hs | score > hs = score
                         | otherwise = hs
 
+-- | Create enemy shoot behaviour based on randomness                        
 spawnRandomBullets :: GameState -> GameState
 spawnRandomBullets gs@(GameState (GameObjects _ ([], spawnCycle) _ _ ) _ _ _ _ _ _) = gs
 spawnRandomBullets gs@(GameState gameobjects@(GameObjects player (enemies, spawnCycle) bullets animations ) state score elapsedTime lastEnemySpawn rng hs) = let (enemyBullets, newRng) = randomBullets enemies rng
@@ -176,6 +186,7 @@ toggleState gs@(GameState _ state _ _ _ _ _)
             | state == Pause = gs {state = InGame}
             | otherwise = gs
 
+-- |     ????       
 checkPos :: Player -> Bool
 checkPos player = (fromIntegral((pposY player) + (pspeed player)) < (fromIntegral screenHeight/2)) && (fromIntegral((pposY player) + (pspeed player)) > -(fromIntegral screenHeight/2))
 

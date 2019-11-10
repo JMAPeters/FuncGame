@@ -1,5 +1,4 @@
 -- | This module defines how to turn
---   the game state into a picture
 module View where
 
 import Graphics.Gloss
@@ -41,6 +40,7 @@ makeWinView gs = pictures ([drawWinText, drawScoreMenu gs])
 
 makeLossView :: GameState -> Picture
 makeLossView gs = pictures ([drawLossText, drawScoreMenu gs])
+
 drawPauseText :: Picture
 drawPauseText = translate (-500) (0) $ Scale 0.5 0.5 $ color green (text ("Pause! Press F1 to continue!"))
 
