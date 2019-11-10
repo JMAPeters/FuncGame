@@ -29,10 +29,15 @@ bulletSize = 10
 randomShoot :: Int
 randomShoot = 50
 
+-- | Enemy spawn pattern
 spawnEnemyCycle :: [Int]
 spawnEnemyCycle = [1 , 3 , 5 , 3 , 6, 8, 10 , 7, 20]
+
+-- | Start position of enemy upon spwaning (just outside the screen)
 enemySpawnX :: Int
 enemySpawnX = (screenWidth `div` 2) + 100
+
+-- | The amount of time between Enemy spawn cycles
 enemySpawnTimer :: Int
 enemySpawnTimer = 150
 
@@ -109,6 +114,6 @@ initialState rng hs = GameState startObjects Start 0 0 0 rng hs
 
 startObjects = GameObjects startPlayer ([], spawnEnemyCycle) [] []
 
--- Player x y size speed lives
+
 startPlayer :: Player
 startPlayer = Player ((-screenWidth `div` 2) + 30) 0 30 0 3
